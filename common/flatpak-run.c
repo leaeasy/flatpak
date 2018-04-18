@@ -753,6 +753,7 @@ flatpak_run_add_environment_args (FlatpakBwrap   *bwrap,
                                   const char     *app_info_path,
                                   FlatpakRunFlags flags,
                                   const char     *app_id,
+								  const char     *app_service,
                                   FlatpakContext *context,
                                   GFile          *app_id_dir,
                                   FlatpakExports **exports_out,
@@ -855,7 +856,10 @@ flatpak_run_add_environment_args (FlatpakBwrap   *bwrap,
     g_debug ("Allowing session-dbus access");
   if (flatpak_run_add_session_dbus_args (bwrap, session_bus_proxy_argv, unrestricted_session_bus) &&
       !unrestricted_session_bus && session_bus_proxy_argv)
-    flatpak_context_add_bus_filters (context, app_id, TRUE, session_bus_proxy_argv);
+	if (app_service == NULL)
+		flatpak_context_add_bus_filters (context, app_id, TRUE, session_bus_proxy_argv);
+	else
+		flatpak_context_add_bus_filters (context, app_service, TRUE, session_bus_proxy_argv);
 
   unrestricted_system_bus = (context->sockets & FLATPAK_CONTEXT_SOCKET_SYSTEM_BUS) != 0;
   if (unrestricted_system_bus)
@@ -863,7 +867,10 @@ flatpak_run_add_environment_args (FlatpakBwrap   *bwrap,
   if (flatpak_run_add_system_dbus_args (context, bwrap, system_bus_proxy_argv,
                                         unrestricted_system_bus) &&
       !unrestricted_system_bus && system_bus_proxy_argv)
-    flatpak_context_add_bus_filters (context, app_id, FALSE, system_bus_proxy_argv);
+	if (app_service == NULL)
+		flatpak_context_add_bus_filters (context, app_id, FALSE, system_bus_proxy_argv);
+	else
+		flatpak_context_add_bus_filters (context, app_service, FALSE, system_bus_proxy_argv);
 
   if ((flags & FLATPAK_RUN_FLAG_NO_A11Y_BUS_PROXY) == 0)
     {
@@ -1436,6 +1443,7 @@ flatpak_run_add_app_info_args (FlatpakBwrap   *bwrap,
                                const char     *runtime_extensions,
                                const char     *app_id,
                                const char     *app_branch,
+                               const char     *app_service,
                                const char     *runtime_ref,
                                GFile          *app_id_dir,
                                FlatpakContext *final_app_context,
@@ -1465,6 +1473,10 @@ flatpak_run_add_app_info_args (FlatpakBwrap   *bwrap,
   close (fd);
 
   keyfile = g_key_file_new ();
+
+  if (app_service != NULL)
+    g_key_file_set_string (keyfile, group, FLATPAK_METADATA_KEY_SERVICE, 
+                         app_service);
 
   if (app_files)
     group = FLATPAK_METADATA_GROUP_APPLICATION;
@@ -2800,6 +2812,7 @@ flatpak_run_app (const char     *app_ref,
   g_autoptr(FlatpakContext) overrides = NULL;
   g_autoptr(FlatpakExports) exports = NULL;
   g_auto(GStrv) app_ref_parts = NULL;
+  g_autofree char *app_service = NULL;
   g_autofree char *commandline = NULL;
   int commandline_2_start;
   g_autofree char *commandline2 = NULL;
@@ -2818,6 +2831,7 @@ flatpak_run_app (const char     *app_ref,
   app_ref_parts = flatpak_decompose_ref (app_ref, error);
   if (app_ref_parts == NULL)
     return FALSE;
+
 
   bwrap = flatpak_bwrap_new (NULL);
 
@@ -2840,6 +2854,11 @@ flatpak_run_app (const char     *app_ref,
         key = FLATPAK_METADATA_KEY_RUNTIME;
 
       metakey = flatpak_deploy_get_metadata (app_deploy);
+
+	  app_service = g_key_file_get_string (metakey,
+										FLATPAK_METADATA_GROUP_APPLICATION,
+										FLATPAK_METADATA_KEY_SERVICE,
+                                        NULL);
       default_runtime = g_key_file_get_string (metakey,
                                                FLATPAK_METADATA_GROUP_APPLICATION,
                                                key, &my_error);
@@ -3008,7 +3027,7 @@ flatpak_run_app (const char     *app_ref,
   if (!flatpak_run_add_app_info_args (bwrap,
                                       app_files, app_deploy_data, app_extensions,
                                       runtime_files, runtime_deploy_data, runtime_extensions,
-                                      app_ref_parts[1], app_ref_parts[3],
+                                      app_ref_parts[1], app_ref_parts[3], app_service,
                                       runtime_ref, app_id_dir, app_context, extra_context,
                                       sandboxed, FALSE,
                                       &app_info_path, error))
@@ -3018,7 +3037,7 @@ flatpak_run_app (const char     *app_ref,
     add_document_portal_args (bwrap, app_ref_parts[1], &doc_mount_path);
 
   if (!flatpak_run_add_environment_args (bwrap, app_info_path, flags,
-                                         app_ref_parts[1], app_context, app_id_dir, &exports, cancellable, error))
+                                         app_ref_parts[1], app_service, app_context, app_id_dir, &exports, cancellable, error))
     return FALSE;
 
   flatpak_run_add_journal_args (bwrap);

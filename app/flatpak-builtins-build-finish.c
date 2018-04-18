@@ -194,7 +194,7 @@ copy_exports (GFile        *source,
 }
 
 static gboolean
-collect_exports (GFile *base, const char *app_id, GCancellable *cancellable, GError **error)
+collect_exports (GFile *base, const char *app_id, const char *app_service, GCancellable *cancellable, GError **error)
 {
   g_autoptr(GFile) files = NULL;
   g_autoptr(GFile) export = NULL;
@@ -233,8 +233,18 @@ collect_exports (GFile *base, const char *app_id, GCancellable *cancellable, GEr
           if (!flatpak_mkdir_p (dest_parent, cancellable, error))
             return FALSE;
           g_debug ("Copying from files/%s", paths[i]);
-          if (!copy_exports (src, dest, paths[i], app_id, cancellable, error))
-            return FALSE;
+		  if (i == 3){
+			if (app_service == NULL){
+				if (!copy_exports (src, dest, paths[i], app_id, cancellable, error))
+					return FALSE;
+			} else {
+				if (!copy_exports (src, dest, paths[i], app_service, cancellable, error))
+					return FALSE;
+			}
+		  } else {
+			if (!copy_exports (src, dest, paths[i], app_id, cancellable, error))
+				return FALSE;
+		  }
         }
     }
 
@@ -514,6 +524,7 @@ flatpak_builtin_build_finish (int argc, char **argv, GCancellable *cancellable, 
   g_autoptr(GFile) metadata_file = NULL;
   g_autofree char *metadata_contents = NULL;
   g_autofree char *id = NULL;
+  g_autofree char *service = NULL;
   gboolean is_runtime = FALSE;
   gsize metadata_size;
   const char *directory;
@@ -568,7 +579,9 @@ flatpak_builtin_build_finish (int argc, char **argv, GCancellable *cancellable, 
   if (!is_runtime)
     {
       g_debug ("Collecting exports");
-      if (!collect_exports (base, id, cancellable, error))
+	  service = g_key_file_get_string (metakey, FLATPAK_METADATA_GROUP_APPLICATION,
+                                  FLATPAK_METADATA_KEY_SERVICE, NULL);
+      if (!collect_exports (base, id, service, cancellable, error))
         return FALSE;
     }
 

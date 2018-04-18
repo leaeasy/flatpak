@@ -4949,7 +4949,8 @@ rewrite_export_dir (const char   *app,
         {
           g_autofree gchar *new_name = NULL;
 
-          if (!flatpak_has_name_prefix (dent->d_name, app))
+          if (!flatpak_has_name_prefix (dent->d_name, app) && 
+			  !(g_str_has_suffix (dent->d_name, ".service")))
             {
               g_warning ("Non-prefixed filename %s in app %s, removing.", dent->d_name, app);
               if (unlinkat (source_iter.fd, dent->d_name, 0) != 0 && errno != ENOENT)
@@ -5391,6 +5392,7 @@ apply_extra_data (FlatpakDir          *self,
   gsize metadata_size;
   g_autoptr(GKeyFile) metakey = NULL;
   g_autofree char *id = NULL;
+  g_autofree char *service = NULL;
   g_autofree char *runtime = NULL;
   g_autofree char *runtime_ref = NULL;
   g_autoptr(FlatpakDeploy) runtime_deploy = NULL;
@@ -5435,6 +5437,8 @@ apply_extra_data (FlatpakDir          *self,
         }
       g_clear_error (&local_error);
     }
+  service = g_key_file_get_string (metakey, group,
+                                   FLATPAK_METADATA_KEY_SERVICE, error);
 
   runtime = g_key_file_get_string (metakey, group,
                                    FLATPAK_METADATA_KEY_RUNTIME, error);
@@ -5488,7 +5492,7 @@ apply_extra_data (FlatpakDir          *self,
                                          FLATPAK_RUN_FLAG_NO_SESSION_BUS_PROXY |
                                          FLATPAK_RUN_FLAG_NO_SYSTEM_BUS_PROXY |
                                          FLATPAK_RUN_FLAG_NO_A11Y_BUS_PROXY,
-                                         id,
+                                         id, service,
                                          app_context, NULL, NULL, cancellable, error))
     return FALSE;
 

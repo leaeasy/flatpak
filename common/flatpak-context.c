@@ -1746,7 +1746,7 @@ flatpak_context_to_args (FlatpakContext *context,
 
 void
 flatpak_context_add_bus_filters (FlatpakContext *context,
-                                 const char     *app_id,
+                                 const char     *dbus_path,
                                  gboolean        session_bus,
                                  GPtrArray      *dbus_proxy_argv)
 {
@@ -1755,11 +1755,11 @@ flatpak_context_add_bus_filters (FlatpakContext *context,
   gpointer key, value;
 
   g_ptr_array_add (dbus_proxy_argv, g_strdup ("--filter"));
-  if (app_id && session_bus)
-    {
-      g_ptr_array_add (dbus_proxy_argv, g_strdup_printf ("--own=%s", app_id));
-      g_ptr_array_add (dbus_proxy_argv, g_strdup_printf ("--own=%s.*", app_id));
-    }
+  if (dbus_path && session_bus)
+  {
+    g_ptr_array_add (dbus_proxy_argv, g_strdup_printf ("--own=%s", dbus_path));
+    g_ptr_array_add (dbus_proxy_argv, g_strdup_printf ("--own=%s.*", dbus_path));
+  }
 
   if (session_bus)
     ht = context->session_bus_policy;
