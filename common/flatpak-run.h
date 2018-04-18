@@ -36,6 +36,7 @@ gboolean flatpak_run_in_transient_unit (const char *app_id,
 #define FLATPAK_METADATA_GROUP_APPLICATION "Application"
 #define FLATPAK_METADATA_GROUP_RUNTIME "Runtime"
 #define FLATPAK_METADATA_KEY_COMMAND "command"
+#define FLATPAK_METADATA_KEY_SERVICE "service"
 #define FLATPAK_METADATA_KEY_NAME "name"
 #define FLATPAK_METADATA_KEY_REQUIRED_FLATPAK "required-flatpak"
 #define FLATPAK_METADATA_KEY_RUNTIME "runtime"
@@ -132,6 +133,7 @@ gboolean flatpak_run_add_environment_args (FlatpakBwrap   *bwrap,
                                            const char     *app_info_path,
                                            FlatpakRunFlags flags,
                                            const char     *app_id,
+                                           const char     *app_service,
                                            FlatpakContext *context,
                                            GFile          *app_id_dir,
                                            FlatpakExports **exports_out,
@@ -166,6 +168,7 @@ gboolean flatpak_run_add_app_info_args (FlatpakBwrap   *bwrap,
                                         const char     *runtime_extensions,
                                         const char     *app_id,
                                         const char     *app_branch,
+                                        const char     *app_service,
                                         const char     *runtime_ref,
                                         GFile          *app_id_dir,
                                         FlatpakContext *final_app_context,

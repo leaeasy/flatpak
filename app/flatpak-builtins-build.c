@@ -106,6 +106,7 @@ flatpak_builtin_build (int argc, char **argv, GCancellable *cancellable, GError 
   const char *directory = NULL;
   const char *command = "/bin/sh";
   g_autofree char *id = NULL;
+  g_autofree char *service = NULL;
   int i;
   int rest_argv_start, rest_argc;
   g_autoptr(FlatpakContext) arg_context = NULL;
@@ -190,6 +191,7 @@ flatpak_builtin_build (int argc, char **argv, GCancellable *cancellable, GError 
 
 
   id = g_key_file_get_string (metakey, group, FLATPAK_METADATA_KEY_NAME, error);
+  service = g_key_file_get_string (metakey, group, FLATPAK_METADATA_KEY_SERVICE, NULL);
   if (id == NULL)
     return FALSE;
 
@@ -414,14 +416,14 @@ flatpak_builtin_build (int argc, char **argv, GCancellable *cancellable, GError 
                                       app_files, NULL, NULL,
                                       runtime_files, runtime_deploy_data, runtime_extensions,
                                       id, NULL,
-                                      runtime_ref,
+                                      runtime_ref, service,
                                       app_id_dir, app_context, NULL,
                                       FALSE, TRUE,
                                       &app_info_path,
                                       error))
     return FALSE;
 
-  if (!flatpak_run_add_environment_args (bwrap, app_info_path, run_flags, id,
+  if (!flatpak_run_add_environment_args (bwrap, app_info_path, run_flags, id, service,
                                          app_context, app_id_dir, NULL, cancellable, error))
     return FALSE;
 

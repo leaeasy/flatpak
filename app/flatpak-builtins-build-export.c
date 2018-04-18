@@ -481,7 +481,7 @@ validate_service_file (GFile *service_file,
 }
 
 static gboolean
-validate_exports (GFile *export, GFile *files, const char *app_id, GError **error)
+validate_exports (GFile *export, GFile *files, const char *app_id, const char *service, GError **error)
 {
   g_autofree char *desktop_path = NULL;
   g_autoptr(GFile) desktop_file = NULL;
@@ -493,17 +493,34 @@ validate_exports (GFile *export, GFile *files, const char *app_id, GError **erro
   desktop_path = g_strconcat ("share/applications/", app_id, ".desktop", NULL);
   desktop_file = g_file_resolve_relative_path (export, desktop_path);
 
-  if (!validate_desktop_file (desktop_file, export, files, app_id, &icon, &activatable, error))
-    return FALSE;
+  if (service == NULL) {
+	if (!validate_desktop_file (desktop_file, export, files, app_id, &icon, &activatable, error))
+  	  return FALSE;
 
-  if (!validate_icon (icon, export, app_id, error))
-    return FALSE;
+  	if (!validate_icon (icon, export, app_id, error))
+  	  return FALSE;
 
-  service_path = g_strconcat ("share/dbus-1/services/", app_id, ".service", NULL);
-  service_file = g_file_resolve_relative_path (export, service_path);
+	service_path = g_strconcat ("share/dbus-1/services/", app_id, ".service", NULL);
+	service_file = g_file_resolve_relative_path (export, service_path);
 
-  if (!validate_service_file (service_file, activatable, files, app_id, error))
-    return FALSE;
+	if (!validate_service_file (service_file, activatable, files, app_id, error))
+		return FALSE;
+
+  } else {
+	if (!validate_desktop_file (desktop_file, export, files, service, &icon, &activatable, error))
+  	  return FALSE;
+
+  	if (!validate_icon (icon, export, service, error))
+  	  return FALSE;
+
+	service_path = g_strconcat ("share/dbus-1/services/", service, ".service", NULL);
+	service_file = g_file_resolve_relative_path (export, service_path);
+
+	if (!validate_service_file (service_file, activatable, files, service, error))
+		return FALSE;
+
+  }
+
 
   return TRUE;
 }
@@ -639,6 +656,7 @@ flatpak_builtin_build_export (int argc, char **argv, GCancellable *cancellable, 
   g_autofree char *arch = NULL;
   g_autofree char *full_branch = NULL;
   g_autofree char *id = NULL;
+  g_autofree char *service = NULL;
   g_autofree char *parent = NULL;
   g_autofree char *commit_checksum = NULL;
   g_autofree char *metadata_contents = NULL;
@@ -758,9 +776,11 @@ flatpak_builtin_build_export (int argc, char **argv, GCancellable *cancellable, 
   if (!collect_extra_data (metakey, &metadata_dict, error))
     goto out;
 
-  if (!(opt_runtime || is_runtime) &&
-      !validate_exports (export, files, id, error))
-    goto out;
+  if (!(opt_runtime || is_runtime)) {
+	service = g_key_file_get_string (metakey, "Application", "service", NULL);
+    if (!validate_exports (export, files, id, service, error))
+		goto out;
+  }
 
   if (!metadata_get_arch (metadata, &arch, error))
     goto out;

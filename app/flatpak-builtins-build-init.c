@@ -34,6 +34,7 @@
 #include "flatpak-utils.h"
 
 static char *opt_arch;
+static char *opt_service;
 static char *opt_var;
 static char *opt_type;
 static char *opt_sdk_dir;
@@ -53,6 +54,7 @@ static GOptionEntry options[] = {
   { "base-extension", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_base_extensions, N_("Include this base extension"), N_("EXTENSION") },
   { "writable-sdk", 'w', 0, G_OPTION_ARG_NONE, &opt_writable_sdk, N_("Initialize /usr with a writable copy of the sdk"), NULL },
   { "type", 0, 0, G_OPTION_ARG_STRING, &opt_type, N_("Specify the build type (app, runtime, extension)"), N_("TYPE") },
+  { "service", 0, 0, G_OPTION_ARG_STRING, &opt_service, N_("Specify the build dbus service path"), NULL },
   { "tag", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_tags, N_("Add a tag"), N_("TAG") },
   { "sdk-extension", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_sdk_extensions, N_("Include this sdk extension in /usr"), N_("EXTENSION") },
   { "sdk-dir", 0, 0, G_OPTION_ARG_STRING, &opt_sdk_dir, N_("Where to store sdk (defaults to 'usr')"), N_("DIR") },
@@ -347,6 +349,13 @@ flatpak_builtin_build_init (int argc, char **argv, GCancellable *cancellable, GE
     g_string_append_printf (metadata_contents,
                             "sdk=%s\n",
                             sdk_ref + strlen ("runtime/"));
+
+  if (is_app && opt_service != NULL)
+    {
+      g_string_append_printf (metadata_contents,
+			                "service=%s\n",
+							opt_service);
+	}
 
   if (opt_tags != NULL)
     {
